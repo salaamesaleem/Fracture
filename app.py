@@ -11,25 +11,34 @@ from PIL import Image
 # APP CONFIGURATION
 # --------------------------------------------------
 st.set_page_config(page_title="Fracture Detection", layout="wide")
-st.title("🦴 Fracture Detection App (YOLO-based)")
+st.title(" Fracture Detection App (YOLO-based)")
 
 # --------------------------------------------------
 # MODEL LOADING (Safe & Cached)
 # --------------------------------------------------
 @st.cache_resource
 def load_model():
-    model_path = "best.pt"
-    # 🔽 Replace this link with your own model’s Google Drive direct link
-    url = "https://drive.google.com/file/d/1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ/view?usp=sharing"
+    import torch
+    from torch.serialization import add_safe_globals
+    from ultralytics.nn.tasks import DetectionModel
+    import gdown
+    import os
 
-    # Download model if not exists
+    model_path = "best.pt"
+    url = "https://drive.google.com/file/d/1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ/view?usp=sharing"  # <-- put your own model ID
+
+    # Download model if not already present
     if not os.path.exists(model_path):
-        with st.spinner("Downloading model... please wait ⏳"):
+        with st.spinner("Downloading YOLO model... please wait ⏳"):
             gdown.download(url, model_path, quiet=False)
 
-    # Load YOLO model safely
+    # Allow YOLO model class to be safely unpickled
+    add_safe_globals([DetectionModel])
+
+    # Load YOLO model
     model = YOLO(model_path)
     return model
+
 
 
 try:
