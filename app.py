@@ -10,14 +10,13 @@ import cv2
 # CONFIG
 # -------------------------------
 MODEL_PATH = "best.pt"
-# Use direct download link for Streamlit Cloud
-MODEL_URL = "https://drive.google.com/uc?id=1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ"
+MODEL_URL = "https://drive.google.com/uc?id=1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ"  # Direct download link
 
 # -------------------------------
 # DOWNLOAD MODEL IF NOT EXISTS
 # -------------------------------
 if not os.path.exists(MODEL_PATH):
-    with st.spinner("Downloading YOLO model weights... ⏳"):
+    with st.spinner("Downloading YOLOv8 model... ⏳"):
         gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
 # -------------------------------
@@ -33,23 +32,23 @@ except Exception as e:
 # -------------------------------
 # STREAMLIT UI
 # -------------------------------
-st.title("Fracture Detection App")
+st.title("Fracture Detection App (PyTorch .pt model)")
 
 uploaded_file = st.file_uploader("📤 Upload an X-ray Image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
+if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Convert PIL → OpenCV
+    # Convert PIL -> OpenCV
     img_array = np.array(image)
     img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-    # Run prediction
+    # Run YOLO prediction
     with st.spinner("🔍 Detecting fractures..."):
         results = model.predict(source=img_bgr, conf=0.5, imgsz=640)
 
-    # Display detection result
+    # Plot results
     res_plotted = results[0].plot()
     st.image(res_plotted, caption="Detection Result", use_container_width=True)
 
