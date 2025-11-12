@@ -1,66 +1,89 @@
 import streamlit as st
 from ultralytics import YOLO
+import torch
 import cv2
-from PIL import Image
 import numpy as np
-import tempfile
 import os
+import gdown
+from PIL import Image
 
-# -----------------------------------------------------------
-# 1️⃣  App Title
-# -----------------------------------------------------------
-st.title("Fracture Detection using YOLO")
-st.write("Upload an X-ray image to detect fractures.")
+# --------------------------------------------------
+# APP CONFIGURATION
+# --------------------------------------------------
+st.set_page_config(page_title="Fracture Detection", layout="wide")
+st.title("🦴 Fracture Detection App (YOLO-based)")
 
-# -----------------------------------------------------------
-# 2️⃣  Load Model
-# -----------------------------------------------------------
+# --------------------------------------------------
+# MODEL LOADING (Safe & Cached)
+# --------------------------------------------------
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")  # your trained model path
+    model_path = "best.pt"
+    # 🔽 Replace this link with your own model’s Google Drive direct link
+    url = "https://drive.google.com/file/d/1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ/view?usp=sharing"
+
+    # Download model if not exists
+    if not os.path.exists(model_path):
+        with st.spinner("Downloading model... please wait ⏳"):
+            gdown.download(url, model_path, quiet=False)
+
+    # Load YOLO model safely
+    model = YOLO(model_path)
     return model
 
-model = load_model()
 
-# -----------------------------------------------------------
-# 3️⃣  Image Upload
-# -----------------------------------------------------------
-uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "jpeg", "png"])
+try:
+    model = load_model()
+    st.success("✅ Model loaded successfully!")
+except Exception as e:
+    st.error(f"❌ Error loading model: {e}")
+    st.stop()
+
+# --------------------------------------------------
+# IMAGE UPLOAD SECTION
+# --------------------------------------------------
+uploaded_file = st.file_uploader("📤 Upload an X-ray image for fracture detection", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Read image with PIL
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    # Read image
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Save to a temporary file (YOLO expects a file path)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-        image.save(temp.name)
-        temp_path = temp.name
+    # Convert PIL → OpenCV format
+    img_array = np.array(image)
+    img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-    # -------------------------------------------------------
-    # 4️⃣  Run Detection
-    # -------------------------------------------------------
-    st.write("Detecting fractures...")
-    results = model(temp_path)
+    # Run YOLO prediction
+    with st.spinner("🔍 Detecting fractures..."):
+        results = model.predict(source=img_bgr, conf=0.5, imgsz=640)
 
-    # results[0].show() won't work in Streamlit — use OpenCV to render boxes
-    result_img = results[0].plot()  # returns an annotated numpy image (BGR)
-    result_img = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)  # convert to RGB
+    # Get first prediction result
+    res_plotted = results[0].plot()  # Draw bounding boxes
+    st.image(res_plotted, caption="Detection Result", use_container_width=True)
 
-    st.image(result_img, caption="Detection Result", use_column_width=True)
+    # Show detected classes and confidence
+    detected = []
+    for box in results[0].boxes:
+        cls = int(box.cls[0])
+        conf = float(box.conf[0])
+        label = model.names[cls] if hasattr(model, 'names') else f"Class {cls}"
+        detected.append((label, conf))
 
-    # -------------------------------------------------------
-    # 5️⃣  Display details (optional)
-    # -------------------------------------------------------
-    boxes = results[0].boxes
-    if boxes:
-        st.subheader("Detections:")
-        for box in boxes:
-            cls_id = int(box.cls[0])
-            conf = float(box.conf[0])
-            st.write(f"• {model.names[cls_id]} — Confidence: {conf:.2f}")
+    if detected:
+        st.subheader("🧠 Detected Fractures:")
+        for label, conf in detected:
+            st.write(f"• {label} ({conf*100:.1f}% confidence)")
     else:
-        st.write("No fractures detected.")
+        st.warning("No fractures detected. ✅")
 
-    # Clean up temp file
-    os.remove(temp_path)
+else:
+    st.info("Please upload an image to start fracture detection.")
+
+# --------------------------------------------------
+# FOOTER
+# --------------------------------------------------
+st.markdown("""
+---
+👨‍⚕️ **Fracture Detection App** — powered by YOLOv8  
+Developed for demonstration purposes.
+""")
