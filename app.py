@@ -9,7 +9,7 @@ import os
 # -----------------------------------------------------------
 # 1️⃣  App Title
 # -----------------------------------------------------------
-st.title("🦴 Fracture Detection using YOLO")
+st.title("Fracture Detection using YOLO")
 st.write("Upload an X-ray image to detect fractures.")
 
 # -----------------------------------------------------------
