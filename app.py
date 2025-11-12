@@ -10,50 +10,55 @@ import cv2
 # CONFIG
 # -------------------------------
 MODEL_PATH = "best.pt"
-MODEL_URL = "https://drive.google.com/uc?id=1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ"  # Direct download link
+# Use direct download link for Streamlit Cloud
+MODEL_URL = "https://drive.google.com/uc?id=1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ"
 
 # -------------------------------
 # DOWNLOAD MODEL IF NOT EXISTS
 # -------------------------------
 if not os.path.exists(MODEL_PATH):
-    with st.spinner("Downloading model weights... ⏳"):
+    with st.spinner("Downloading YOLO model weights... ⏳"):
         gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
 # -------------------------------
 # LOAD YOLO MODEL
 # -------------------------------
-model = YOLO(MODEL_PATH)
+try:
+    model = YOLO(MODEL_PATH)
+    st.success("✅ Model loaded successfully!")
+except Exception as e:
+    st.error(f"❌ Error loading model: {e}")
+    st.stop()
 
 # -------------------------------
-# STREAMLIT APP UI
+# STREAMLIT UI
 # -------------------------------
 st.title("Fracture Detection App")
 
 uploaded_file = st.file_uploader("📤 Upload an X-ray Image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Display uploaded image
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    # Convert PIL → OpenCV format
+    # Convert PIL → OpenCV
     img_array = np.array(image)
     img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-    # Run YOLO prediction
+    # Run prediction
     with st.spinner("🔍 Detecting fractures..."):
         results = model.predict(source=img_bgr, conf=0.5, imgsz=640)
 
-    # Show result with bounding boxes
+    # Display detection result
     res_plotted = results[0].plot()
     st.image(res_plotted, caption="Detection Result", use_container_width=True)
 
-    # Show detected classes and confidence
+    # Show detected classes & confidence
     detected = []
     for box in results[0].boxes:
         cls = int(box.cls[0])
         conf = float(box.conf[0])
-        label = model.names[cls] if hasattr(model, 'names') else f"Class {cls}"
+        label = model.names[cls] if hasattr(model, "names") else f"Class {cls}"
         detected.append((label, conf))
 
     if detected:
@@ -63,7 +68,7 @@ if uploaded_file is not None:
     else:
         st.warning("No fractures detected. ✅")
 else:
-    st.info("Please upload an image to start fracture detection.")
+    st.info("Please upload an X-ray image to start fracture detection.")
 
 # -------------------------------
 # FOOTER
