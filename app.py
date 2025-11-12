@@ -1,60 +1,38 @@
 import streamlit as st
 from ultralytics import YOLO
-import torch
-import cv2
-import numpy as np
-import os
 import gdown
+import os
 from PIL import Image
+import numpy as np
+import cv2
 
-# --------------------------------------------------
-# APP CONFIGURATION
-# --------------------------------------------------
-st.set_page_config(page_title="Fracture Detection", layout="wide")
-st.title(" Fracture Detection App (YOLO-based)")
+# -------------------------------
+# CONFIG
+# -------------------------------
+MODEL_PATH = "best.pt"
+MODEL_URL = "https://drive.google.com/uc?id=1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ"  # Direct download link
 
-# --------------------------------------------------
-# MODEL LOADING (Safe & Cached)
-# --------------------------------------------------
-@st.cache_resource
-def load_model():
-    import torch
-    from torch.serialization import add_safe_globals
-    from ultralytics.nn.tasks import DetectionModel
-    import gdown
-    import os
+# -------------------------------
+# DOWNLOAD MODEL IF NOT EXISTS
+# -------------------------------
+if not os.path.exists(MODEL_PATH):
+    with st.spinner("Downloading model weights... ⏳"):
+        gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-    model_path = "best.pt"
-    url = "https://drive.google.com/file/d/1yF2j8_d_V27wI7oxfOUD5pxq1sQJOXqQ/view?usp=sharing"  # <-- put your own model ID
+# -------------------------------
+# LOAD YOLO MODEL
+# -------------------------------
+model = YOLO(MODEL_PATH)
 
-    # Download model if not already present
-    if not os.path.exists(model_path):
-        with st.spinner("Downloading YOLO model... please wait ⏳"):
-            gdown.download(url, model_path, quiet=False)
+# -------------------------------
+# STREAMLIT APP UI
+# -------------------------------
+st.title("Fracture Detection App")
 
-    # Allow YOLO model class to be safely unpickled
-    add_safe_globals([DetectionModel])
-
-    # Load YOLO model
-    model = YOLO(model_path)
-    return model
-
-
-
-try:
-    model = load_model()
-    st.success("✅ Model loaded successfully!")
-except Exception as e:
-    st.error(f"❌ Error loading model: {e}")
-    st.stop()
-
-# --------------------------------------------------
-# IMAGE UPLOAD SECTION
-# --------------------------------------------------
-uploaded_file = st.file_uploader("📤 Upload an X-ray image for fracture detection", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📤 Upload an X-ray Image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Read image
+    # Display uploaded image
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
@@ -66,8 +44,8 @@ if uploaded_file is not None:
     with st.spinner("🔍 Detecting fractures..."):
         results = model.predict(source=img_bgr, conf=0.5, imgsz=640)
 
-    # Get first prediction result
-    res_plotted = results[0].plot()  # Draw bounding boxes
+    # Show result with bounding boxes
+    res_plotted = results[0].plot()
     st.image(res_plotted, caption="Detection Result", use_container_width=True)
 
     # Show detected classes and confidence
@@ -84,13 +62,12 @@ if uploaded_file is not None:
             st.write(f"• {label} ({conf*100:.1f}% confidence)")
     else:
         st.warning("No fractures detected. ✅")
-
 else:
     st.info("Please upload an image to start fracture detection.")
 
-# --------------------------------------------------
+# -------------------------------
 # FOOTER
-# --------------------------------------------------
+# -------------------------------
 st.markdown("""
 ---
 👨‍⚕️ **Fracture Detection App** — powered by YOLOv8  

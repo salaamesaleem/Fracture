@@ -7,8 +7,8 @@ torchaudio==2.5.1
 
 # For image and video processing
 opencv-python-headless==4.10.0.84
-Pillow
-numpy
+Pillow==10.0.1
+numpy==1.26.0
 
 # Utilities
-gdown
+gdown==4.7.1
