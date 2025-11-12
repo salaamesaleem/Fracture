@@ -1,7 +1,14 @@
+# Core dependencies
+streamlit==1.38.0
+ultralytics==8.2.90
 torch==2.5.1
-ultralytics==8.0.196
-opencv-python-headless
-streamlit
-gdown
-numpy
+torchvision==0.20.1
+torchaudio==2.5.1
+
+# For image and video processing
+opencv-python-headless==4.10.0.84
 Pillow
+numpy
+
+# Utilities
+gdown
